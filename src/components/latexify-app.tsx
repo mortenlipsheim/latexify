@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { invokeFormulaToLatex } from '@/lib/actions';
 import { LatexifyLogo } from '@/components/icons/latexify-logo';
-import { UploadCloud, Copy, Share2, Settings, Loader2, X, RotateCcw } from 'lucide-react';
+import { UploadCloud, Copy, Share2, Settings, Loader2, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -85,9 +85,29 @@ export default function LatexifyApp() {
 
   const fullLatexCode = `${prefix}${latexCode}${suffix}`;
 
+  const handleLatexCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    let newRawValue = event.target.value;
+    let coreLatex = newRawValue;
+
+    // Attempt to strip prefix
+    if (prefix && coreLatex.startsWith(prefix)) {
+      coreLatex = coreLatex.substring(prefix.length);
+    }
+
+    // Attempt to strip suffix from the (potentially prefix-stripped) string
+    if (suffix && coreLatex.endsWith(suffix)) {
+      // Ensure we don't accidentally strip suffix if it's shorter than the remaining string
+      // or if the string was ONLY the suffix after stripping prefix.
+      if (coreLatex.length >= suffix.length) {
+         coreLatex = coreLatex.substring(0, coreLatex.length - suffix.length);
+      }
+    }
+    setLatexCode(coreLatex);
+  };
+
   const handleCopyToClipboard = async () => {
-    if (!latexCode) {
-      toast({ title: 'Nothing to copy', description: 'Please generate LaTeX code first.', variant: 'destructive' });
+    if (!latexCode && !prefix && !suffix) { // Check if there's truly nothing to copy
+      toast({ title: 'Nothing to copy', description: 'Please generate or enter LaTeX code first.', variant: 'destructive' });
       return;
     }
     try {
@@ -99,8 +119,8 @@ export default function LatexifyApp() {
   };
 
   const handleShare = async () => {
-    if (!latexCode) {
-      toast({ title: 'Nothing to share', description: 'Please generate LaTeX code first.', variant: 'destructive' });
+    if (!latexCode && !prefix && !suffix) {
+      toast({ title: 'Nothing to share', description: 'Please generate or enter LaTeX code first.', variant: 'destructive' });
       return;
     }
     if (navigator.share) {
@@ -121,8 +141,7 @@ export default function LatexifyApp() {
   };
 
   const handleSaveSettings = (newPrefix: string, newSuffix: string) => {
-    setPrefix(newPrefix);
-    setSuffix(newSuffix);
+    // State is already updated by Input onChange handlers directly
     localStorage.setItem('latexify-prefix', newPrefix);
     localStorage.setItem('latexify-suffix', newSuffix);
     toast({ title: 'Settings Saved', description: 'Formatting preferences updated.' });
@@ -207,8 +226,8 @@ export default function LatexifyApp() {
           <Label htmlFor="latex-output" className="text-base">Generated LaTeX Code</Label>
           <Textarea
             id="latex-output"
-            value={latexCode}
-            onChange={(e) => setLatexCode(e.target.value)}
+            value={fullLatexCode}
+            onChange={handleLatexCodeChange}
             placeholder="Your LaTeX code will appear here..."
             rows={6}
             className="font-mono text-sm p-3 rounded-md shadow-sm focus:ring-primary focus:border-primary"
@@ -217,10 +236,10 @@ export default function LatexifyApp() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Button onClick={handleCopyToClipboard} disabled={isLoading || !latexCode} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
+          <Button onClick={handleCopyToClipboard} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
             <Copy className="mr-2 h-5 w-5" /> Copy
           </Button>
-          <Button onClick={handleShare} disabled={isLoading || !latexCode} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
+          <Button onClick={handleShare} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
             <Share2 className="mr-2 h-5 w-5" /> Share
           </Button>
           
@@ -244,7 +263,7 @@ export default function LatexifyApp() {
                   </Label>
                   <Input
                     id="prefix"
-                    defaultValue={prefix}
+                    value={prefix} // Use value for controlled component
                     onChange={(e) => setPrefix(e.target.value)}
                     className="col-span-3 font-mono"
                     placeholder="e.g. $$"
@@ -256,7 +275,7 @@ export default function LatexifyApp() {
                   </Label>
                   <Input
                     id="suffix"
-                    defaultValue={suffix}
+                    value={suffix} // Use value for controlled component
                     onChange={(e) => setSuffix(e.target.value)}
                     className="col-span-3 font-mono"
                     placeholder="e.g. $$"
@@ -265,6 +284,7 @@ export default function LatexifyApp() {
               </div>
               <DialogFooter>
                 <DialogClose asChild>
+                  {/* Pass current prefix and suffix states to handleSaveSettings */}
                   <Button type="button" onClick={() => handleSaveSettings(prefix, suffix)}>Save Changes</Button>
                 </DialogClose>
               </DialogFooter>
