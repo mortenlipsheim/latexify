@@ -24,7 +24,7 @@ function GoogleLogo() {
 
 
 export default function Home() {
-  const { user, isAllowed, isLoading, signInWithGoogle, signOut } = useAuth();
+  const { user, isAllowed, isLoading, isAuthBypassed, signInWithGoogle, signOut } = useAuth();
   const { t, translationsLoaded } = useTranslation();
 
 
@@ -37,7 +37,8 @@ export default function Home() {
     );
   }
 
-  if (!user) {
+  // If auth is NOT bypassed AND there's no user, show sign-in prompt.
+  if (!isAuthBypassed && !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -60,7 +61,8 @@ export default function Home() {
     );
   }
 
-  if (!isAllowed) {
+  // If auth is NOT bypassed AND user exists BUT is not allowed, show access denied.
+  if (!isAuthBypassed && user && !isAllowed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -87,20 +89,36 @@ export default function Home() {
     );
   }
 
-  // User is authenticated and allowed
-  return (
-    <div className="flex flex-col items-center justify-start min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-2xl mb-6 flex justify-between items-center">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <UserCheck className="h-5 w-5 mr-2 text-green-600"/>
-          {t('signedInAs') || 'Signed in as:'} <span className="font-semibold ml-1 text-foreground">{user.displayName || user.email}</span>
-        </div>
-        <Button onClick={signOut} variant="outline" size="sm">
-          <LogOut className="mr-2 h-4 w-4" />
-          {t('signOutButton') || 'Sign Out'}
-        </Button>
+  // If auth IS bypassed, OR if auth is NOT bypassed AND user exists AND is allowed: show the app.
+  if (isAuthBypassed || (user && isAllowed)) {
+    return (
+      <div className="flex flex-col items-center justify-start min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        {/* Conditionally render user info and sign-out button only if auth is NOT bypassed and user exists */}
+        {!isAuthBypassed && user && (
+          <div className="w-full max-w-2xl mb-6 flex justify-between items-center">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <UserCheck className="h-5 w-5 mr-2 text-green-600"/>
+              {t('signedInAs') || 'Signed in as:'} <span className="font-semibold ml-1 text-foreground">{user.displayName || user.email}</span>
+            </div>
+            <Button onClick={signOut} variant="outline" size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              {t('signOutButton') || 'Sign Out'}
+            </Button>
+          </div>
+        )}
+        <LatexifyApp />
       </div>
-      <LatexifyApp />
-    </div>
-  );
+    );
+  }
+  
+  // Fallback: This should ideally not be reached if the logic above is exhaustive.
+  // If it is reached, it implies an unexpected state. For robustness,
+  // we can show a generic loading or error, or default to the sign-in prompt
+  // if Firebase is configured but something went wrong with state determination.
+   return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="mt-6 text-xl text-foreground">{t('loadingApp') || 'Loading application...'}</p>
+      </div>
+    );
 }
