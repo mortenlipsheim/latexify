@@ -20,8 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"; // DialogClose removed as it's not explicitly used for controlled dialogs
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation, type Language } from '@/hooks/use-translation';
 
@@ -39,12 +38,11 @@ export default function LatexifyApp() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // States for settings dialog inputs to enable "Save Changes" button logic
   const [dialogPrefix, setDialogPrefix] = useState<string>(prefix);
   const [dialogSuffix, setDialogSuffix] = useState<string>(suffix);
   const [dialogLanguage, setDialogLanguage] = useState<Language>(currentLanguage);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-
+  const [actionCompletedToken, setActionCompletedToken] = useState(0); // For forcing re-renders
 
   useEffect(() => {
     const storedPrefix = localStorage.getItem('latexify-prefix');
@@ -59,20 +57,17 @@ export default function LatexifyApp() {
     }
   }, []);
 
-  // Update dialog state when context language changes
   useEffect(() => {
     setDialogLanguage(currentLanguage);
   }, [currentLanguage]);
 
-  // Update dialog prefix/suffix when app prefix/suffix change (e.g. on initial load)
-   useEffect(() => {
+  useEffect(() => {
     setDialogPrefix(prefix);
   }, [prefix]);
 
   useEffect(() => {
     setDialogSuffix(suffix);
   }, [suffix]);
-
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -126,7 +121,7 @@ export default function LatexifyApp() {
       coreLatex = coreLatex.substring(prefix.length);
     }
     if (suffix && coreLatex.endsWith(suffix)) {
-      if (coreLatex.length >= suffix.length) {
+      if (coreLatex.length >= suffix.length) { // Ensure suffix is not longer than the string
          coreLatex = coreLatex.substring(0, coreLatex.length - suffix.length);
       }
     }
@@ -134,37 +129,41 @@ export default function LatexifyApp() {
   };
 
   const handleCopyToClipboard = async () => {
-    if (!latexCode && !prefix && !suffix) {
-      toast({ title: t('nothingToCopyTitle'), description: t('nothingToCopyDescription'), variant: 'destructive' });
-      return;
-    }
     try {
+      if ((prefix + latexCode + suffix).trim() === '') {
+        toast({ title: t('nothingToCopyTitle'), description: t('nothingToCopyDescription'), variant: 'destructive' });
+        return;
+      }
       await navigator.clipboard.writeText(fullLatexCode);
       toast({ title: t('copiedToClipboardTitle'), description: t('copiedToClipboardDescription')});
     } catch (err) {
       toast({ title: t('failedToCopyTitle'), description: t('failedToCopyDescription'), variant: 'destructive' });
+    } finally {
+      setActionCompletedToken(prev => prev + 1); // Force re-render
     }
   };
 
   const handleShare = async () => {
-    if (!latexCode && !prefix && !suffix) {
-      toast({ title: t('nothingToShareTitle'), description: t('nothingToShareDescription'), variant: 'destructive' });
-      return;
-    }
-    if (navigator.share) {
-      try {
+    try {
+      if ((prefix + latexCode + suffix).trim() === '') {
+        toast({ title: t('nothingToShareTitle'), description: t('nothingToShareDescription'), variant: 'destructive' });
+        return;
+      }
+      if (navigator.share) {
         await navigator.share({
-          title: 'LaTeX Formula Code', // This title for share sheet is not easily translatable without passing language to share API if supported
+          title: 'LaTeX Formula Code',
           text: fullLatexCode,
         });
         toast({ title: t('sharedSuccessfullyTitle') });
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          toast({ title: t('sharingFailedTitle'), description: (err as Error).message, variant: 'destructive' });
-        }
+      } else {
+        toast({ title: t('shareNotSupportedTitle'), description: t('shareNotSupportedDescription'), variant: 'destructive' });
       }
-    } else {
-      toast({ title: t('shareNotSupportedTitle'), description: t('shareNotSupportedDescription'), variant: 'destructive' });
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        toast({ title: t('sharingFailedTitle'), description: (err as Error).message, variant: 'destructive' });
+      }
+    } finally {
+      setActionCompletedToken(prev => prev + 1); // Force re-render
     }
   };
 
@@ -198,7 +197,7 @@ export default function LatexifyApp() {
     if (toastDescriptionKey) {
         toast({ title: t('settingsSavedTitle'), description: t(toastDescriptionKey) });
     }
-    setIsSettingsDialogOpen(false); // Close dialog on save
+    setIsSettingsDialogOpen(false);
   };
   
   const triggerFileInput = () => {
@@ -220,10 +219,12 @@ export default function LatexifyApp() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen py-8 px-4 sm:px-6 lg:px-8">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg">{t('loadingApp')}</p> {}
+        <p className="mt-4 text-lg">{t('loadingApp')}</p>
       </div>
     );
   }
+  
+  const nothingToActOn = (prefix + latexCode + suffix).trim() === '';
 
   return (
     <Card className="w-full max-w-2xl shadow-xl">
@@ -299,10 +300,18 @@ export default function LatexifyApp() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Button onClick={handleCopyToClipboard} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
+          <Button 
+            onClick={handleCopyToClipboard} 
+            disabled={isLoading || nothingToActOn} 
+            className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
+          >
             <Copy className="mr-2 h-5 w-5" /> {t('copyButton')}
           </Button>
-          <Button onClick={handleShare} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
+          <Button 
+            onClick={handleShare} 
+            disabled={isLoading || nothingToActOn} 
+            className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
+          >
             <Share2 className="mr-2 h-5 w-5" /> {t('shareButton')}
           </Button>
           
@@ -312,14 +321,14 @@ export default function LatexifyApp() {
                 <Settings className="mr-2 h-5 w-5" /> {t('settingsButton')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md"> {/* Adjusted width for more content */}
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{t('settingsDialogTitle')}</DialogTitle>
                 <DialogDescription>
                   {t('settingsDialogDescription')}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-6 py-4"> {/* Increased gap */}
+              <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="prefix" className="text-right">
                     {t('prefixLabel')}
