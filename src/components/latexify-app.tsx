@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"; // DialogClose removed as it's not explicitly used for controlled dialogs
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation, type Language } from '@/hooks/use-translation';
 
@@ -121,7 +121,7 @@ export default function LatexifyApp() {
       coreLatex = coreLatex.substring(prefix.length);
     }
     if (suffix && coreLatex.endsWith(suffix)) {
-      if (coreLatex.length >= suffix.length) { // Ensure suffix is not longer than the string
+      if (coreLatex.length >= suffix.length) { 
          coreLatex = coreLatex.substring(0, coreLatex.length - suffix.length);
       }
     }
@@ -139,7 +139,7 @@ export default function LatexifyApp() {
     } catch (err) {
       toast({ title: t('failedToCopyTitle'), description: t('failedToCopyDescription'), variant: 'destructive' });
     } finally {
-      setActionCompletedToken(prev => prev + 1); // Force re-render
+      setActionCompletedToken(prev => prev + 1); 
     }
   };
 
@@ -163,7 +163,7 @@ export default function LatexifyApp() {
         toast({ title: t('sharingFailedTitle'), description: (err as Error).message, variant: 'destructive' });
       }
     } finally {
-      setActionCompletedToken(prev => prev + 1); // Force re-render
+      setActionCompletedToken(prev => prev + 1); 
     }
   };
 
@@ -225,6 +225,9 @@ export default function LatexifyApp() {
   }
   
   const nothingToActOn = (prefix + latexCode + suffix).trim() === '';
+  // Key for re-rendering, useful for some edge cases with button visibility
+  const currentActionToken = actionCompletedToken;
+
 
   return (
     <Card className="w-full max-w-2xl shadow-xl">
@@ -299,82 +302,89 @@ export default function LatexifyApp() {
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Button 
-            onClick={handleCopyToClipboard} 
-            disabled={isLoading || nothingToActOn} 
-            className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
-          >
-            <Copy className="mr-2 h-5 w-5" /> {t('copyButton')}
-          </Button>
-          <Button 
-            onClick={handleShare} 
-            disabled={isLoading || nothingToActOn} 
-            className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
-          >
-            <Share2 className="mr-2 h-5 w-5" /> {t('shareButton')}
-          </Button>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" key={`actions-grid-${currentActionToken}`}>
+          <div> {/* Wrapper for Copy button */}
+            <Button 
+              onClick={handleCopyToClipboard} 
+              disabled={isLoading || nothingToActOn} 
+              className="w-full bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
+            >
+              <Copy className="mr-2 h-5 w-5" /> {t('copyButton')}
+            </Button>
+          </div>
+          <div> {/* Wrapper for Share button */}
+            <Button 
+              onClick={handleShare} 
+              disabled={isLoading || nothingToActOn} 
+              className="w-full bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground"
+            >
+              <Share2 className="mr-2 h-5 w-5" /> {t('shareButton')}
+            </Button>
+          </div>
           
-          <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="col-span-2 sm:col-span-1" onClick={() => setIsSettingsDialogOpen(true)}>
-                <Settings className="mr-2 h-5 w-5" /> {t('settingsButton')}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{t('settingsDialogTitle')}</DialogTitle>
-                <DialogDescription>
-                  {t('settingsDialogDescription')}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-6 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="prefix" className="text-right">
-                    {t('prefixLabel')}
-                  </Label>
-                  <Input
-                    id="prefix"
-                    value={dialogPrefix}
-                    onChange={(e) => setDialogPrefix(e.target.value)}
-                    className="col-span-3 font-mono"
-                    placeholder="e.g. $$"
-                  />
+          <div className="col-span-2 sm:col-span-1"> {/* Wrapper for Settings dialog trigger */}
+            <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full" onClick={() => setIsSettingsDialogOpen(true)}>
+                  <Settings className="mr-2 h-5 w-5" /> {t('settingsButton')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{t('settingsDialogTitle')}</DialogTitle>
+                  <DialogDescription>
+                    {t('settingsDialogDescription')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-6 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="prefix" className="text-right">
+                      {t('prefixLabel')}
+                    </Label>
+                    <Input
+                      id="prefix"
+                      value={dialogPrefix}
+                      onChange={(e) => setDialogPrefix(e.target.value)}
+                      className="col-span-3 font-mono"
+                      placeholder="e.g. $$"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="suffix" className="text-right">
+                      {t('suffixLabel')}
+                    </Label>
+                    <Input
+                      id="suffix"
+                      value={dialogSuffix}
+                      onChange={(e) => setDialogSuffix(e.target.value)}
+                      className="col-span-3 font-mono"
+                      placeholder="e.g. $$"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="language" className="text-right">
+                      {t('languageLabel')}
+                    </Label>
+                    <Select value={dialogLanguage} onValueChange={(value) => setDialogLanguage(value as Language)}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder={t('selectLanguagePlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">{t('english')}</SelectItem>
+                        <SelectItem value="fr">{t('french')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="suffix" className="text-right">
-                    {t('suffixLabel')}
-                  </Label>
-                  <Input
-                    id="suffix"
-                    value={dialogSuffix}
-                    onChange={(e) => setDialogSuffix(e.target.value)}
-                    className="col-span-3 font-mono"
-                    placeholder="e.g. $$"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="language" className="text-right">
-                    {t('languageLabel')}
-                  </Label>
-                  <Select value={dialogLanguage} onValueChange={(value) => setDialogLanguage(value as Language)}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder={t('selectLanguagePlaceholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">{t('english')}</SelectItem>
-                      <SelectItem value="fr">{t('french')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                  <Button type="button" onClick={handleSaveSettings}>{t('saveSettingsButton')}</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                    <Button type="button" onClick={handleSaveSettings}>{t('saveSettingsButton')}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
