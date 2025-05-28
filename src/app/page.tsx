@@ -1,3 +1,4 @@
+
 'use client';
 
 import LatexifyApp from '@/components/latexify-app';
