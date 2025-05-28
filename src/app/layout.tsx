@@ -1,7 +1,9 @@
+
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { I18nProvider } from '@/contexts/i18n-context';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Latexify',
+  title: 'Latexify', // This title is static, app content will be translated.
   description: 'Convert formula images to LaTeX code effortlessly.',
 };
 
@@ -24,10 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // The lang attribute on <html> will be set dynamically by I18nProvider
+    <html>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Toaster />
+        <I18nProvider>
+          {children}
+          <Toaster />
+        </I18nProvider>
       </body>
     </html>
   );

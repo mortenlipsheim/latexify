@@ -21,7 +21,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslation, type Language } from '@/hooks/use-translation';
 
 export default function LatexifyApp() {
   const [formulaImage, setFormulaImage] = useState<string | null>(null);
@@ -31,15 +33,46 @@ export default function LatexifyApp() {
   const [suffix, setSuffix] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
   const { toast } = useToast();
+  const { language: currentLanguage, setLanguage: i18nSetLanguage, t, translationsLoaded } = useTranslation();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States for settings dialog inputs to enable "Save Changes" button logic
+  const [dialogPrefix, setDialogPrefix] = useState<string>(prefix);
+  const [dialogSuffix, setDialogSuffix] = useState<string>(suffix);
+  const [dialogLanguage, setDialogLanguage] = useState<Language>(currentLanguage);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+
 
   useEffect(() => {
     const storedPrefix = localStorage.getItem('latexify-prefix');
     const storedSuffix = localStorage.getItem('latexify-suffix');
-    if (storedPrefix) setPrefix(storedPrefix);
-    if (storedSuffix) setSuffix(storedSuffix);
+    if (storedPrefix) {
+      setPrefix(storedPrefix);
+      setDialogPrefix(storedPrefix);
+    }
+    if (storedSuffix) {
+      setSuffix(storedSuffix);
+      setDialogSuffix(storedSuffix);
+    }
   }, []);
+
+  // Update dialog state when context language changes
+  useEffect(() => {
+    setDialogLanguage(currentLanguage);
+  }, [currentLanguage]);
+
+  // Update dialog prefix/suffix when app prefix/suffix change (e.g. on initial load)
+   useEffect(() => {
+    setDialogPrefix(prefix);
+  }, [prefix]);
+
+  useEffect(() => {
+    setDialogSuffix(suffix);
+  }, [suffix]);
+
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,7 +84,7 @@ export default function LatexifyApp() {
         processImage(e.target?.result as string);
       };
       reader.readAsDataURL(file);
-      setError(null); // Clear previous errors
+      setError(null); 
     }
   };
 
@@ -63,7 +96,7 @@ export default function LatexifyApp() {
       if ('error' in result) {
         setError(result.error);
         toast({
-          title: 'Error Processing Image',
+          title: t('errorProcessingImageTitle'),
           description: result.error,
           variant: 'destructive',
         });
@@ -74,7 +107,7 @@ export default function LatexifyApp() {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
       setError(errorMessage);
       toast({
-        title: 'Error',
+        title: t('errorTitle'),
         description: errorMessage,
         variant: 'destructive',
       });
@@ -89,15 +122,10 @@ export default function LatexifyApp() {
     let newRawValue = event.target.value;
     let coreLatex = newRawValue;
 
-    // Attempt to strip prefix
     if (prefix && coreLatex.startsWith(prefix)) {
       coreLatex = coreLatex.substring(prefix.length);
     }
-
-    // Attempt to strip suffix from the (potentially prefix-stripped) string
     if (suffix && coreLatex.endsWith(suffix)) {
-      // Ensure we don't accidentally strip suffix if it's shorter than the remaining string
-      // or if the string was ONLY the suffix after stripping prefix.
       if (coreLatex.length >= suffix.length) {
          coreLatex = coreLatex.substring(0, coreLatex.length - suffix.length);
       }
@@ -106,45 +134,71 @@ export default function LatexifyApp() {
   };
 
   const handleCopyToClipboard = async () => {
-    if (!latexCode && !prefix && !suffix) { // Check if there's truly nothing to copy
-      toast({ title: 'Nothing to copy', description: 'Please generate or enter LaTeX code first.', variant: 'destructive' });
+    if (!latexCode && !prefix && !suffix) {
+      toast({ title: t('nothingToCopyTitle'), description: t('nothingToCopyDescription'), variant: 'destructive' });
       return;
     }
     try {
       await navigator.clipboard.writeText(fullLatexCode);
-      toast({ title: 'Copied to clipboard!', description: 'LaTeX code copied successfully.'});
+      toast({ title: t('copiedToClipboardTitle'), description: t('copiedToClipboardDescription')});
     } catch (err) {
-      toast({ title: 'Failed to copy', description: 'Could not copy to clipboard.', variant: 'destructive' });
+      toast({ title: t('failedToCopyTitle'), description: t('failedToCopyDescription'), variant: 'destructive' });
     }
   };
 
   const handleShare = async () => {
     if (!latexCode && !prefix && !suffix) {
-      toast({ title: 'Nothing to share', description: 'Please generate or enter LaTeX code first.', variant: 'destructive' });
+      toast({ title: t('nothingToShareTitle'), description: t('nothingToShareDescription'), variant: 'destructive' });
       return;
     }
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'LaTeX Formula Code',
+          title: 'LaTeX Formula Code', // This title for share sheet is not easily translatable without passing language to share API if supported
           text: fullLatexCode,
         });
-        toast({ title: 'Shared successfully!' });
+        toast({ title: t('sharedSuccessfullyTitle') });
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          toast({ title: 'Sharing failed', description: (err as Error).message, variant: 'destructive' });
+          toast({ title: t('sharingFailedTitle'), description: (err as Error).message, variant: 'destructive' });
         }
       }
     } else {
-      toast({ title: 'Share not supported', description: 'Your browser does not support the Web Share API.', variant: 'destructive' });
+      toast({ title: t('shareNotSupportedTitle'), description: t('shareNotSupportedDescription'), variant: 'destructive' });
     }
   };
 
-  const handleSaveSettings = (newPrefix: string, newSuffix: string) => {
-    // State is already updated by Input onChange handlers directly
-    localStorage.setItem('latexify-prefix', newPrefix);
-    localStorage.setItem('latexify-suffix', newSuffix);
-    toast({ title: 'Settings Saved', description: 'Formatting preferences updated.' });
+  const handleSaveSettings = () => {
+    const prefixChanged = dialogPrefix !== prefix;
+    const suffixChanged = dialogSuffix !== suffix;
+    const languageChanged = dialogLanguage !== currentLanguage;
+
+    if (prefixChanged) {
+        setPrefix(dialogPrefix);
+        localStorage.setItem('latexify-prefix', dialogPrefix);
+    }
+    if (suffixChanged) {
+        setSuffix(dialogSuffix);
+        localStorage.setItem('latexify-suffix', dialogSuffix);
+    }
+    
+    let toastDescriptionKey = "";
+    if ((prefixChanged || suffixChanged) && languageChanged) {
+        toastDescriptionKey = 'settingsSavedDescriptionBoth';
+    } else if (prefixChanged || suffixChanged) {
+        toastDescriptionKey = 'settingsSavedDescriptionFormat';
+    } else if (languageChanged) {
+        toastDescriptionKey = 'settingsSavedDescriptionLanguage';
+    }
+    
+    if (languageChanged) {
+      i18nSetLanguage(dialogLanguage);
+    }
+
+    if (toastDescriptionKey) {
+        toast({ title: t('settingsSavedTitle'), description: t(toastDescriptionKey) });
+    }
+    setIsSettingsDialogOpen(false); // Close dialog on save
   };
   
   const triggerFileInput = () => {
@@ -157,32 +211,41 @@ export default function LatexifyApp() {
     setLatexCode('');
     setError(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset the file input
+      fileInputRef.current.value = '';
     }
-    toast({ title: 'Reset', description: 'Cleared image and LaTeX code.' });
+    toast({ title: t('resetToastTitle'), description: t('resetToastDescription') });
   };
+
+  if (!translationsLoaded) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg">{t('loadingApp')}</p> {}
+      </div>
+    );
+  }
 
   return (
     <Card className="w-full max-w-2xl shadow-xl">
       <CardHeader className="text-center">
         <div className="flex items-center justify-center space-x-3 mb-4">
           <LatexifyLogo />
-          <CardTitle className="text-3xl font-bold">Latexify</CardTitle>
+          <CardTitle className="text-3xl font-bold">{t('appTitle')}</CardTitle>
         </div>
         <CardDescription>
-          Snap a math formula, get LaTeX code instantly.
+          {t('appDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="formula-upload" className="text-base">Upload Formula Image</Label>
+          <Label htmlFor="formula-upload" className="text-base">{t('uploadLabel')}</Label>
           <div className="flex space-x-2">
             <Button onClick={triggerFileInput} variant="outline" className="w-full" disabled={isLoading}>
               <UploadCloud className="mr-2 h-5 w-5" />
-              {imageFile ? imageFile.name : 'Select Image'}
+              {imageFile ? imageFile.name : t('selectImageButton')}
             </Button>
              {formulaImage && (
-                <Button onClick={handleReset} variant="outline" size="icon" disabled={isLoading} aria-label="Reset image">
+                <Button onClick={handleReset} variant="outline" size="icon" disabled={isLoading} aria-label={t('resetButtonLabel')}>
                     <RotateCcw className="h-5 w-5" />
                 </Button>
             )}
@@ -214,7 +277,7 @@ export default function LatexifyApp() {
         {isLoading && (
           <div className="flex items-center justify-center space-x-2 text-primary">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <p className="text-lg">Processing formula...</p>
+            <p className="text-lg">{t('processingFormula')}</p>
           </div>
         )}
 
@@ -223,12 +286,12 @@ export default function LatexifyApp() {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="latex-output" className="text-base">Generated LaTeX Code</Label>
+          <Label htmlFor="latex-output" className="text-base">{t('latexOutputLabel')}</Label>
           <Textarea
             id="latex-output"
             value={fullLatexCode}
             onChange={handleLatexCodeChange}
-            placeholder="Your LaTeX code will appear here..."
+            placeholder={t('latexPlaceholder')}
             rows={6}
             className="font-mono text-sm p-3 rounded-md shadow-sm focus:ring-primary focus:border-primary"
             readOnly={isLoading}
@@ -237,56 +300,67 @@ export default function LatexifyApp() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Button onClick={handleCopyToClipboard} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
-            <Copy className="mr-2 h-5 w-5" /> Copy
+            <Copy className="mr-2 h-5 w-5" /> {t('copyButton')}
           </Button>
           <Button onClick={handleShare} disabled={isLoading && (!latexCode && !prefix && !suffix)} className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent),0.9)] text-accent-foreground">
-            <Share2 className="mr-2 h-5 w-5" /> Share
+            <Share2 className="mr-2 h-5 w-5" /> {t('shareButton')}
           </Button>
           
-          <Dialog>
+          <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="col-span-2 sm:col-span-1">
-                <Settings className="mr-2 h-5 w-5" /> Settings
+              <Button variant="outline" className="col-span-2 sm:col-span-1" onClick={() => setIsSettingsDialogOpen(true)}>
+                <Settings className="mr-2 h-5 w-5" /> {t('settingsButton')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-md"> {/* Adjusted width for more content */}
               <DialogHeader>
-                <DialogTitle>Formatting Settings</DialogTitle>
+                <DialogTitle>{t('settingsDialogTitle')}</DialogTitle>
                 <DialogDescription>
-                  Define custom prefix and suffix for your LaTeX code. These will be saved in your browser.
+                  {t('settingsDialogDescription')}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-6 py-4"> {/* Increased gap */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="prefix" className="text-right">
-                    Prefix
+                    {t('prefixLabel')}
                   </Label>
                   <Input
                     id="prefix"
-                    value={prefix} // Use value for controlled component
-                    onChange={(e) => setPrefix(e.target.value)}
+                    value={dialogPrefix}
+                    onChange={(e) => setDialogPrefix(e.target.value)}
                     className="col-span-3 font-mono"
                     placeholder="e.g. $$"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="suffix" className="text-right">
-                    Suffix
+                    {t('suffixLabel')}
                   </Label>
                   <Input
                     id="suffix"
-                    value={suffix} // Use value for controlled component
-                    onChange={(e) => setSuffix(e.target.value)}
+                    value={dialogSuffix}
+                    onChange={(e) => setDialogSuffix(e.target.value)}
                     className="col-span-3 font-mono"
                     placeholder="e.g. $$"
                   />
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="language" className="text-right">
+                    {t('languageLabel')}
+                  </Label>
+                  <Select value={dialogLanguage} onValueChange={(value) => setDialogLanguage(value as Language)}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder={t('selectLanguagePlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">{t('english')}</SelectItem>
+                      <SelectItem value="fr">{t('french')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <DialogFooter>
-                <DialogClose asChild>
-                  {/* Pass current prefix and suffix states to handleSaveSettings */}
-                  <Button type="button" onClick={() => handleSaveSettings(prefix, suffix)}>Save Changes</Button>
-                </DialogClose>
+                  <Button type="button" onClick={handleSaveSettings}>{t('saveSettingsButton')}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
