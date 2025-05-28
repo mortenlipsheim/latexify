@@ -1,4 +1,3 @@
-
 {
   "appTitle": "Latexify",
   "appDescription": "Snap a math formula, get LaTeX code instantly.",
@@ -55,14 +54,5 @@
   "formulaPreviewAlt": "Formula preview",
   "cameraAccessDeniedTitle": "Camera Access Denied",
   "cameraAccessDeniedDescription": "Please enable camera permissions in your browser settings to use this feature.",
-  "cropFailedTitle": "Cropping Failed",
-  "authenticating": "Authenticating...",
-  "signInPrompt": "Please sign in to use Latexify.",
-  "signInDescription": "Use your Google account to access the application.",
-  "signInWithGoogleButton": "Sign in with Google",
-  "accessDeniedTitle": "Access Denied",
-  "accessDeniedMessage": "You are signed in as:",
-  "accessDeniedDescription": "Unfortunately, this account is not authorized to use the application. Please contact the administrator if you believe this is an error.",
-  "signOutButton": "Sign Out",
-  "signedInAs": "Signed in as:"
+  "cropFailedTitle": "Cropping Failed"
 }
