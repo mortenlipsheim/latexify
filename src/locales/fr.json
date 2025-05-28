@@ -55,5 +55,14 @@
   "formulaPreviewAlt": "Aperçu de la formule",
   "cameraAccessDeniedTitle": "Accès caméra refusé",
   "cameraAccessDeniedDescription": "Veuillez activer les autorisations de caméra dans les paramètres de votre navigateur pour utiliser cette fonctionnalité.",
-  "cropFailedTitle": "Échec du rognage"
+  "cropFailedTitle": "Échec du rognage",
+  "authenticating": "Authentification...",
+  "signInPrompt": "Veuillez vous connecter pour utiliser Latexify.",
+  "signInDescription": "Utilisez votre compte Google pour accéder à l'application.",
+  "signInWithGoogleButton": "Se connecter avec Google",
+  "accessDeniedTitle": "Accès Refusé",
+  "accessDeniedMessage": "Vous êtes connecté en tant que :",
+  "accessDeniedDescription": "Malheureusement, ce compte n'est pas autorisé à utiliser l'application. Veuillez contacter l'administrateur si vous pensez qu'il s'agit d'une erreur.",
+  "signOutButton": "Se déconnecter",
+  "signedInAs": "Connecté en tant que :"
 }

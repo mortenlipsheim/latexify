@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProvider } from '@/contexts/i18n-context';
+import { AuthProvider } from '@/contexts/auth-context';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,10 +30,12 @@ export default function RootLayout({
     // The lang attribute on <html> will be set dynamically by I18nProvider
     <html>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <I18nProvider>
-          {children}
-          <Toaster />
-        </I18nProvider>
+        <AuthProvider>
+          <I18nProvider>
+            {children}
+            <Toaster />
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );
