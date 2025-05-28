@@ -2,8 +2,9 @@
 {
   "appTitle": "Latexify",
   "appDescription": "Photographiez une formule mathématique, obtenez instantanément le code LaTeX.",
-  "uploadLabel": "Télécharger l'image de la formule",
-  "selectImageButton": "Sélectionner une image",
+  "uploadLabel": "Télécharger ou Capturer l'image de la formule",
+  "selectImageButton": "Sélectionner/Capturer Image",
+  "changeImageButton": "Changer d'image",
   "resetButtonLabel": "Réinitialiser l'image",
   "processingFormula": "Traitement de la formule...",
   "latexOutputLabel": "Code LaTeX généré",
@@ -40,5 +41,19 @@
   "selectLanguagePlaceholder": "Sélectionner la langue",
   "english": "Anglais",
   "french": "Français",
-  "loadingApp": "Chargement de l'application..."
+  "loadingApp": "Chargement de l'application...",
+  "selectImageSourceTitle": "Sélectionner la source de l'image",
+  "uploadFromGalleryButton": "Télécharger de la galerie",
+  "takePhotoButton": "Prendre une photo",
+  "cameraViewTitle": "Vue Caméra",
+  "captureButton": "Capturer",
+  "cancelButton": "Annuler",
+  "cropImageTitle": "Rogner l'image",
+  "confirmCropButton": "Confirmer le rognage",
+  "useOriginalButton": "Utiliser l'original",
+  "cancelCropButton": "Annuler le rognage",
+  "formulaPreviewAlt": "Aperçu de la formule",
+  "cameraAccessDeniedTitle": "Accès caméra refusé",
+  "cameraAccessDeniedDescription": "Veuillez activer les autorisations de caméra dans les paramètres de votre navigateur pour utiliser cette fonctionnalité.",
+  "cropFailedTitle": "Échec du rognage"
 }

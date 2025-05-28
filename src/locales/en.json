@@ -2,8 +2,9 @@
 {
   "appTitle": "Latexify",
   "appDescription": "Snap a math formula, get LaTeX code instantly.",
-  "uploadLabel": "Upload Formula Image",
-  "selectImageButton": "Select Image",
+  "uploadLabel": "Upload or Capture Formula Image",
+  "selectImageButton": "Select/Capture Image",
+  "changeImageButton": "Change Image",
   "resetButtonLabel": "Reset image",
   "processingFormula": "Processing formula...",
   "latexOutputLabel": "Generated LaTeX Code",
@@ -40,5 +41,19 @@
   "selectLanguagePlaceholder": "Select Language",
   "english": "English",
   "french": "French",
-  "loadingApp": "Loading application..."
+  "loadingApp": "Loading application...",
+  "selectImageSourceTitle": "Select Image Source",
+  "uploadFromGalleryButton": "Upload from Gallery",
+  "takePhotoButton": "Take Photo",
+  "cameraViewTitle": "Camera View",
+  "captureButton": "Capture",
+  "cancelButton": "Cancel",
+  "cropImageTitle": "Crop Image",
+  "confirmCropButton": "Confirm Crop",
+  "useOriginalButton": "Use Original",
+  "cancelCropButton": "Cancel Crop",
+  "formulaPreviewAlt": "Formula preview",
+  "cameraAccessDeniedTitle": "Camera Access Denied",
+  "cameraAccessDeniedDescription": "Please enable camera permissions in your browser settings to use this feature.",
+  "cropFailedTitle": "Cropping Failed"
 }
