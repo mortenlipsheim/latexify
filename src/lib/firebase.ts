@@ -11,8 +11,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check if the essential API key is present.
-export const isFirebaseConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+// Check if the essential API key and Project ID are present and non-empty.
+export const isFirebaseConfigValid = 
+  !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "" &&
+  !!firebaseConfig.projectId && firebaseConfig.projectId !== "";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
@@ -26,11 +28,13 @@ if (isFirebaseConfigValid) {
   auth = getAuth(app);
 } else {
   console.error(
-    "Firebase configuration is missing or invalid. " +
-    "Please check your .env file and ensure all NEXT_PUBLIC_FIREBASE_* variables are set correctly. " +
-    "Specifically, NEXT_PUBLIC_FIREBASE_API_KEY is crucial."
+    "Firebase configuration is missing or invalid. Authentication will be bypassed. " +
+    "Please check your .env file. To enable Firebase authentication, ensure " +
+    "NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set correctly. " +
+    "Other NEXT_PUBLIC_FIREBASE_* variables might also be needed depending on Firebase services used."
   );
-  // app and auth will remain undefined
+  // app and auth will remain undefined, and the app will bypass auth.
 }
 
 export { app, auth };
+
