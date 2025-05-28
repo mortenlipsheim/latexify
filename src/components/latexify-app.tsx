@@ -31,43 +31,52 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 // Helper function to get cropped image data
 function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: PixelCrop,
-  previewCanvas: HTMLCanvasElement,
-  targetWidth: number = pixelCrop.width, // optional: specify target width for output
-  targetHeight: number = pixelCrop.height // optional: specify target height for output
+  imageElement: HTMLImageElement, // The HTMLImageElement that was displayed in the cropper
+  pixelCrop: PixelCrop,      // The crop selection in pixels relative to the displayed imageElement
+  previewCanvas: HTMLCanvasElement // Canvas element to draw the cropped image onto
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const image = document.createElement('img');
-    image.src = imageSrc;
-    image.onload = () => {
-      const canvas = previewCanvas;
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-      const ctx = canvas.getContext('2d');
+    const canvas = previewCanvas;
 
-      if (!ctx) {
-        reject(new Error('No 2d context'));
-        return;
-      }
-      
-      const scaleX = image.naturalWidth / image.width;
-      const scaleY = image.naturalHeight / image.height;
+    // Calculate scale factors based on the image element displayed in the cropper
+    // This maps pixelCrop coordinates (on displayed image) to coordinates on the original image
+    const scaleX = imageElement.naturalWidth / imageElement.width;
+    const scaleY = imageElement.naturalHeight / imageElement.height;
 
-      ctx.drawImage(
-        image,
-        pixelCrop.x * scaleX,
-        pixelCrop.y * scaleY,
-        pixelCrop.width * scaleX,
-        pixelCrop.height * scaleY,
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-      resolve(canvas.toDataURL('image/png'));
-    };
-    image.onerror = (error) => reject(error);
+    // Calculate the crop area's top-left corner and dimensions on the original image
+    const cropX = pixelCrop.x * scaleX;
+    const cropY = pixelCrop.y * scaleY;
+    const sourceWidth = pixelCrop.width * scaleX;
+    const sourceHeight = pixelCrop.height * scaleY;
+
+    // Set the canvas to the exact dimensions of the crop area at original resolution
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('No 2d context for cropping'));
+      return;
+    }
+
+    // Draw the cropped portion of the source image onto the canvas
+    // The source image is imageElement (the one from the cropper)
+    // The source rectangle (sx, sy, sWidth, sHeight) is (cropX, cropY, sourceWidth, sourceHeight)
+    // The destination rectangle (dx, dy, dWidth, dHeight) is (0, 0, sourceWidth, sourceHeight)
+    // This draws the selected part of the original image onto the canvas without further scaling.
+    ctx.drawImage(
+      imageElement,
+      cropX,
+      cropY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      sourceWidth,
+      sourceHeight
+    );
+
+    resolve(canvas.toDataURL('image/png'));
   });
 }
 
@@ -86,7 +95,7 @@ export default function LatexifyApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cropPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const imgCropRef = useRef<HTMLImageElement>(null);
+  const imgCropRef = useRef<HTMLImageElement>(null); // Ref for the <img> inside ReactCrop
 
   // Dialog states
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
@@ -99,9 +108,9 @@ export default function LatexifyApp() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
   // Cropping states
-  const [imageForCropping, setImageForCropping] = useState<string | null>(null); // Raw image before crop
-  const [crop, setCrop] = useState<CropType>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [imageForCropping, setImageForCropping] = useState<string | null>(null); // Raw image (Data URI) before crop, used as src for imgCropRef
+  const [crop, setCrop] = useState<CropType>(); // Current crop selection (percentage or pixels, based on unit)
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>(); // Final crop selection in pixels
   const [cropAspect, setCropAspect] = useState<number | undefined>(undefined); // undefined for free crop
 
   const [dialogPrefix, setDialogPrefix] = useState<string>(prefix);
@@ -227,26 +236,38 @@ export default function LatexifyApp() {
   };
 
   const handleConfirmCrop = async () => {
-    if (completedCrop && imageForCropping && cropPreviewCanvasRef.current && imgCropRef.current) {
-       try {
+    if (completedCrop && imgCropRef.current && cropPreviewCanvasRef.current) {
+      try {
+        const imageElement = imgCropRef.current;
+        // Ensure image is loaded and has dimensions, vital for scaling.
+        if (imageElement.naturalWidth === 0 || imageElement.naturalHeight === 0) {
+            toast({
+                title: t('cropFailedTitle') || "Cropping Failed",
+                description: "Image properties not available for cropping. Please try again.",
+                variant: "destructive"
+            });
+            setIsCropViewOpen(false); // Close dialog on critical error
+            setImageForCropping(null);
+            setCrop(undefined);
+            setCompletedCrop(undefined);
+            return;
+        }
+
         const croppedImageDataURL = await getCroppedImg(
-          imageForCropping,
+          imageElement, // Pass the HTMLImageElement itself
           completedCrop,
-          cropPreviewCanvasRef.current,
-          imgCropRef.current.naturalWidth * (completedCrop.width/100), // Example target width, adjust as needed
-          imgCropRef.current.naturalHeight * (completedCrop.height/100)  // Example target height
+          cropPreviewCanvasRef.current
         );
         await processImageAndSetState(croppedImageDataURL);
       } catch (e) {
         console.error("Cropping failed", e);
         toast({ title: t('cropFailedTitle') || "Cropping Failed", description: (e as Error).message, variant: "destructive" });
-        // Fallback to original if crop fails? Or just show error? For now, just error.
       }
     }
     setIsCropViewOpen(false);
-    setImageForCropping(null);
-    setCrop(undefined);
-    setCompletedCrop(undefined);
+    setImageForCropping(null); // Clear the image for cropping as it has been processed or discarded
+    setCrop(undefined); // Reset crop selection visuals
+    setCompletedCrop(undefined); // Reset completed crop data
   };
 
   const handleUseOriginal = async () => {
@@ -259,28 +280,32 @@ export default function LatexifyApp() {
     setCompletedCrop(undefined);
   };
   
+  // This function is called when the image in ReactCrop has loaded.
+  // It's used to set an initial crop.
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height, naturalWidth, naturalHeight } = e.currentTarget;
     if (naturalWidth < 1 || naturalHeight < 1) {
-        // Prevent issues if image data is invalid
+        // Prevent issues if image data is invalid or not loaded
+        console.error("Image in cropper has invalid dimensions.");
         return;
     }
 
-    // Default crop to center 50%
+    // Default crop to center 50% width, aspect ratio of the image itself
     const newCrop = centerCrop(
       makeAspectCrop(
         {
           unit: '%',
-          width: 50, // Initial crop width percentage
+          width: 50, 
         },
-        cropAspect || naturalWidth / naturalHeight, // Use aspect or natural aspect
+        cropAspect || naturalWidth / naturalHeight, 
         naturalWidth,
         naturalHeight
       ),
-      naturalWidth,
-      naturalHeight
+      naturalWidth, // containerWidth for centerCrop
+      naturalHeight // containerHeight for centerCrop
     );
     setCrop(newCrop);
+    // Note: completedCrop will be set by ReactCrop's onComplete callback
   }
 
 
@@ -337,12 +362,12 @@ export default function LatexifyApp() {
     setFormulaImage(null);
     setLatexCode('');
     setError(null);
-    setImageForCropping(null);
-    setCrop(undefined);
-    setCompletedCrop(undefined);
+    setImageForCropping(null); // Clear image being cropped
+    setCrop(undefined); // Reset crop selection visual
+    setCompletedCrop(undefined); // Reset completed crop data
     setIsCameraViewOpen(false); // Also close camera if it was open
-    setIsCropViewOpen(false);
-    if (fileInputRef.current) { fileInputRef.current.value = ''; }
+    setIsCropViewOpen(false); // Close crop view if open
+    if (fileInputRef.current) { fileInputRef.current.value = ''; } // Reset file input
     toast({ title: t('resetToastTitle'), description: t('resetToastDescription') });
   };
 
@@ -369,7 +394,7 @@ export default function LatexifyApp() {
         <CardDescription>{t('appDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Hidden canvas for crop utility */}
+        {/* Hidden canvas for crop utility, ref attached */}
         <canvas ref={cropPreviewCanvasRef} style={{ display: 'none' }} />
 
         {/* Source Selection Dialog Trigger */}
@@ -435,7 +460,8 @@ export default function LatexifyApp() {
                             <AlertDescription>{t('cameraAccessDeniedDescription') || "Please allow camera access to use this feature."}</AlertDescription>
                         </Alert>
                     )}
-                    {hasCameraPermission && <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay playsInline muted />}
+                    {/* Ensure video tag is always rendered for ref, but content depends on permission */}
+                    <video ref={videoRef} className={`w-full aspect-video rounded-md bg-muted ${!hasCameraPermission ? 'hidden' : ''}`} autoPlay playsInline muted />
                 </div>
                 <DialogFooter className="sm:justify-between">
                     <Button variant="outline" onClick={() => setIsCameraViewOpen(false)} disabled={isLoading}>
@@ -458,25 +484,25 @@ export default function LatexifyApp() {
                     {imageForCropping && (
                         <ReactCrop
                             crop={crop}
-                            onChange={(_, percentCrop) => setCrop(percentCrop)}
-                            onComplete={(c) => setCompletedCrop(c)}
+                            onChange={(_, percentCrop) => setCrop(percentCrop)} // c (pixelCrop), percentCrop
+                            onComplete={(c) => setCompletedCrop(c)} // c (pixelCrop), percentCrop
                             aspect={cropAspect}
-                            minWidth={50}
-                            minHeight={50}
+                            minWidth={50} // min pixel width for crop selection
+                            minHeight={50} // min pixel height for crop selection
                             ruleOfThirds
                         >
                             <img 
-                              ref={imgCropRef}
-                              alt="Crop me" 
-                              src={imageForCropping} 
-                              onLoad={onImageLoad}
-                              style={{ maxHeight: '50vh', objectFit: 'contain' }}
+                              ref={imgCropRef} // Ref to the image element for ReactCrop
+                              alt={t('formulaPreviewAlt') || "Formula preview"}
+                              src={imageForCropping} // Source is the Data URI
+                              onLoad={onImageLoad} // Sets initial crop
+                              style={{ maxHeight: '50vh', objectFit: 'contain' }} // Style for display within dialog
                             />
                         </ReactCrop>
                     )}
                 </div>
                 <DialogFooter className="sm:justify-between">
-                     <Button variant="outline" onClick={() => {setIsCropViewOpen(false); setImageForCropping(null);}} disabled={isLoading}>
+                     <Button variant="outline" onClick={() => {setIsCropViewOpen(false); setImageForCropping(null); setCrop(undefined); setCompletedCrop(undefined);}} disabled={isLoading}>
                         <X className="mr-2 h-4 w-4" />{t('cancelCropButton') || "Cancel"}
                     </Button>
                     <div className="flex gap-2">
@@ -497,9 +523,9 @@ export default function LatexifyApp() {
             <Image
               src={formulaImage}
               alt={t('formulaPreviewAlt') || "Formula preview"}
-              width={300}
+              width={300} // These are max display widths/heights, aspect ratio preserved by object-contain
               height={150}
-              className="object-contain rounded-md max-h-[200px]"
+              className="object-contain rounded-md max-h-[200px]" // Ensure this class is effective
               data-ai-hint="math formula"
             />
           </div>
@@ -581,3 +607,4 @@ export default function LatexifyApp() {
     </Card>
   );
 }
+
