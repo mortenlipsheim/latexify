@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { invokeFormulaToLatex } from '@/lib/actions';
 import { LatexifyLogo } from '@/components/icons/latexify-logo';
-import { UploadCloud, Copy, Share2, Settings, Loader2, X } from 'lucide-react';
+import { UploadCloud, Copy, Share2, Settings, Loader2, X, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -131,6 +132,17 @@ export default function LatexifyApp() {
     fileInputRef.current?.click();
   };
 
+  const handleReset = () => {
+    setFormulaImage(null);
+    setImageFile(null);
+    setLatexCode('');
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // Reset the file input
+    }
+    toast({ title: 'Reset', description: 'Cleared image and LaTeX code.' });
+  };
+
   return (
     <Card className="w-full max-w-2xl shadow-xl">
       <CardHeader className="text-center">
@@ -145,10 +157,17 @@ export default function LatexifyApp() {
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="formula-upload" className="text-base">Upload Formula Image</Label>
-          <Button onClick={triggerFileInput} variant="outline" className="w-full" disabled={isLoading}>
-            <UploadCloud className="mr-2 h-5 w-5" />
-            {imageFile ? imageFile.name : 'Select Image'}
-          </Button>
+          <div className="flex space-x-2">
+            <Button onClick={triggerFileInput} variant="outline" className="w-full" disabled={isLoading}>
+              <UploadCloud className="mr-2 h-5 w-5" />
+              {imageFile ? imageFile.name : 'Select Image'}
+            </Button>
+             {formulaImage && (
+                <Button onClick={handleReset} variant="outline" size="icon" disabled={isLoading} aria-label="Reset image">
+                    <RotateCcw className="h-5 w-5" />
+                </Button>
+            )}
+          </div>
           <Input
             id="formula-upload"
             ref={fileInputRef}
