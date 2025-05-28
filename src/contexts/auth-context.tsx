@@ -17,6 +17,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Hardcoded allowed email addresses
+const HARDCODED_ALLOWED_EMAILS = ['morten@gmail.com', 'sven.gausland@gmail.com'].map(email => email.toLowerCase());
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAllowed, setIsAllowed] = useState<boolean>(false);
@@ -28,9 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAllowed(false);
       return;
     }
-    const allowedEmailsEnv = process.env.NEXT_PUBLIC_ALLOWED_EMAILS || '';
-    const allowedEmailsArray = allowedEmailsEnv.split(',').map(email => email.trim().toLowerCase());
-    setIsAllowed(allowedEmailsArray.includes(currentUser.email.toLowerCase()));
+    // Check against the hardcoded list
+    setIsAllowed(HARDCODED_ALLOWED_EMAILS.includes(currentUser.email.toLowerCase()));
   }, []);
 
   useEffect(() => {
