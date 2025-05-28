@@ -11,15 +11,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
+// Check if the essential API key is present.
+export const isFirebaseConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+
+if (isFirebaseConfigValid) {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0]; // Use the already initialized app
+  }
+  auth = getAuth(app);
 } else {
-  app = getApps()[0];
+  console.error(
+    "Firebase configuration is missing or invalid. " +
+    "Please check your .env file and ensure all NEXT_PUBLIC_FIREBASE_* variables are set correctly. " +
+    "Specifically, NEXT_PUBLIC_FIREBASE_API_KEY is crucial."
+  );
+  // app and auth will remain undefined
 }
-
-auth = getAuth(app);
 
 export { app, auth };
