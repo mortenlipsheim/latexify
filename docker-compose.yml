@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  latexify:
+    build: .
+    container_name: latexify
+    restart: unless-stopped
+    ports:
+      - "8081:3001"

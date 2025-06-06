@@ -1,0 +1,5 @@
+{
+  "name": "LaTeXify - Advanced LaTeX Editor",
+  "description": "A responsive React web application for creating, editing, and previewing LaTeX equations in real-time. Features a comprehensive symbol palette for easy input, live rendering via KaTeX, and a persistent history of your work for quick access and reuse. Designed for students, educators, and professionals working with mathematical notations.",
+  "requestFramePermissions": []
+}
