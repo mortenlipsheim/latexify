@@ -1,5 +1,6 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Use an official Node.js runtime as a parent image.
+# The standard 'node:18' image includes build tools needed for packages like mathjax-node.
+FROM node:18
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
@@ -17,4 +18,4 @@ COPY . .
 EXPOSE 3001
 
 # Define the command to run the app
-CMD [ "node", "dev" ]
+CMD [ "node", "index.js" ]
