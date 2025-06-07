@@ -1,14 +1,21 @@
 # Use an official Node.js runtime as a parent image.
-# The standard 'node:18' image includes build tools needed for packages like mathjax-node.
 FROM node:18
+
+# Install build-essential tools needed for complex native modules like mathjax-node
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json to the working directory
+# Copy package files
 COPY package*.json ./
 
-# Install any needed packages
+# Install app dependencies
+# This should now succeed because the build tools are present
 RUN npm install
 
 # Copy the rest of the application's source code
